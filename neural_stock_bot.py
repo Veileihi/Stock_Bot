@@ -2,14 +2,14 @@ import numpy as np
 import scipy.special as ss
 
 # neural network class definition
-class NeuralNetwork:
+class StockBot:
 
     # initialise the neural network
-    def __init__(self, inputnodes, hiddennodes, outputnodes, nhiddenlayers, nhiddenoutputs, learningrate):
+    def __init__(self, hiddennodes, nhiddenlayers, nhiddenoutputs, learningrate):
         # set number of nodes in each input, hidden, and output layer
-        self.inodes = inputnodes + nhiddenoutputs
+        self.inodes = 5 + nhiddenoutputs
         self.hnodes = hiddennodes
-        self.onodes = outputnodes + nhiddenoutputs
+        self.onodes = 5 + nhiddenoutputs
 
         # number of hidden layers & hidden in/outputs
         self.nhlayers = nhiddenlayers
@@ -30,20 +30,21 @@ class NeuralNetwork:
         pass
 
     # train the neural network
-    def train(self, inputs_list, targets_list):
+    def train(self, inputs_list):
+
+        next_hinputs = [0 for i in range(self.nhout)]
         for dat in range(0, len(inputs_list) - 1):
             # Cycles through two inputs in the time series, using backprop into the prior time element
             two_cycle_outputs = []
             two_cycle_targets = []
-            next_hinputs = [0 for i in range(self.nhout)]
-
+            
             for two_cycle in range(2):
                 # append 0 * the number of hidden inputs to the input list, next_hinputs changes depending on time-step
                 inputs = np.array(inputs_list[dat + two_cycle] + next_hinputs).T
                 # output list for all layers to be used in backprop
                 output_list = [inputs]
                 # target for current time-step
-                targets = np.array(targets_list[dat + two_cycle])
+                targets = np.array(inputs_list[dat + two_cycle + 1])
                 # stores the targets for both time-steps considered
                 two_cycle_targets.insert(0, targets)
                 
@@ -83,7 +84,7 @@ class NeuralNetwork:
                     output_errors = targets - final_output
                 else:
                     # output errors for first step come from the prior step
-                    output_errors = [0] + current_errors[-self.nhout :]
+                    output_errors = two_cycle_targets[two_cycle] + current_errors[-self.nhout :]
                     
                 # current errors variable to make the method more clear
                 current_errors = output_errors
@@ -109,18 +110,44 @@ class NeuralNetwork:
 
     # must write new query function     
     # query the neural network
-    def query(self, inputs):
-        # hidden inputs from initial inputs
-        hidden_inputs = np.dot(self.wih, inputs)
-        # calculate the signals emerging from hidden layer
-        hidden_outputs = self.activation_function(hidden_inputs)
+    def predict(self, inputs_list, stepsbehind, stepsahead):
+        # list of predictions made given parameters
+        predictions = []
+        # only making predictions with stepsbehind steps, but also need steps ahead true values for comparisons
+        inputs_list = inputs_list[-(stepsbehind + stepsahead) :]
 
-        # calculate signals into final output layer
-        final_inputs = np.dot(self.who, hidden_outputs)
-        # calculate the signals emerging from final output layer
-        final_outputs = self.activation_function(final_inputs)
+        next_hinputs = [0 for i in range(self.nhout)]
+        for dat in range(0, len(inputs_list) - stepsahead):    
 
-        return final_outputs
+            if dat < (len(inputs_list) - stepsahead):     
+                # append 0 * the number of hidden inputs to the input list, next_hinputs changes depending on time-step
+                inputs = np.array(inputs_list[dat] + next_hinputs).T
+            else:
+                inputs = np.array(next_hinputs).T
+            
+            # calculates the first inputs for the first hidden layer
+            hidden_inputs = np.dot(self.wih, inputs)
+            hidden_outputs = self.activation_function(hidden_inputs)
+            
+            # loops through each layer, calculating the outputs for each and storing them
+            current_layer = 0
+            while current_layer < len(self.wm):
+                # calculates the inputs for the next layer, then the outputs through the activation function
+                hidden_inputs = np.dot(self.wm[current_layer], hidden_outputs[current_layer])
+                hidden_outputs = self.activation_function(hidden_inputs)
+
+                # increments the layer pointer
+                current_layer += 1
+
+            if dat < (len(inputs_list) - stepsahead):
+                # the hidden outputs from the first time step are fed into the hidden inputs for the second
+                next_hinputs = hidden_outputs[-self.nhout :]
+            else:
+                # prediction steps utilise previous predictions
+                next_hinputs = hidden_outputs
+                predictions.append(next_hinputs[: -self.nhout])
+
+        return predictions
 
 
 
