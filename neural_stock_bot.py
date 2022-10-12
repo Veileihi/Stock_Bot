@@ -36,8 +36,8 @@ class StockBot:
         for dat in range(0, len(inputs_list) - 1):
             # Cycles through two inputs in the time series, using backprop into the prior time element
             two_cycle_outputs = []
-            two_cycle_targets = []
-            
+            two_cycle_targets = []            
+
             for two_cycle in range(2):
                 # append 0 * the number of hidden inputs to the input list, next_hinputs changes depending on time-step
                 inputs = np.array(inputs_list[dat + two_cycle] + next_hinputs).T
@@ -72,6 +72,10 @@ class StockBot:
                 if two_cycle == 0: 
                     next_hinputs = output_list[-1][-self.nhout :]
                     continue               
+
+            # buy/sell query to find target values
+            profit, disparity = self.buy_to_sell_query(inputs_list)  
+               
 
             # Multi-timestep backprop
             for two_cycle in range(2):
