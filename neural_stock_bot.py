@@ -31,11 +31,12 @@ class NeuralNetwork:
 
     # train the neural network
     def train(self, inputs_list, targets_list):
+
+        next_hinputs = [0 for i in range(self.nhout)]
         for dat in range(0, len(inputs_list) - 1):
             # Cycles through two inputs in the time series, using backprop into the prior time element
             two_cycle_outputs = []
-            two_cycle_targets = []
-            next_hinputs = [0 for i in range(self.nhout)]
+            two_cycle_targets = []            
 
             for two_cycle in range(2):
                 # append 0 * the number of hidden inputs to the input list, next_hinputs changes depending on time-step
