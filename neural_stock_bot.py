@@ -5,11 +5,11 @@ import scipy.special as ss
 class NeuralNetwork:
 
     # initialise the neural network
-    def __init__(self, inputnodes, hiddennodes, outputnodes, nhiddenlayers, nhiddenoutputs, learningrate):
+    def __init__(self, hiddennodes,  nhiddenlayers, nhiddenoutputs, learningrate, buythreshold, sellthreshold):
         # set number of nodes in each input, hidden, and output layer
-        self.inodes = inputnodes + nhiddenoutputs
+        self.inodes = 5 + nhiddenoutputs
         self.hnodes = hiddennodes
-        self.onodes = outputnodes + nhiddenoutputs
+        self.onodes = 1 + nhiddenoutputs
 
         # number of hidden layers & hidden in/outputs
         self.nhlayers = nhiddenlayers
@@ -23,6 +23,9 @@ class NeuralNetwork:
 
         # learning rate
         self.lr = learningrate
+        # buy/sell threshold
+        self.buy_threshold = buythreshold
+        self.sell_threshold = sellthreshold
         
         # activation function is the sigmoid function
         self.activation_function = lambda x: ss.expit(x)
@@ -73,6 +76,10 @@ class NeuralNetwork:
                     next_hinputs = output_list[-1][-self.nhout :]
                     continue
 
+            # buy/sell query to find target values
+            profit, disparity = self.buy_to_sell_query(inputs_list)  
+               
+
             # Multi-timestep backprop
             for two_cycle in range(2):
                 if two_cycle == 0:
@@ -108,20 +115,47 @@ class NeuralNetwork:
             
         pass
 
-    # must write new query function     
+     
     # query the neural network
-    def query(self, inputs):
-        # hidden inputs from initial inputs
-        hidden_inputs = np.dot(self.wih, inputs)
-        # calculate the signals emerging from hidden layer
-        hidden_outputs = self.activation_function(hidden_inputs)
+    def buy_to_sell_query(self, inputs_list):
+        buy_sell_points = []
+        buy_marker = False
 
-        # calculate signals into final output layer
-        final_inputs = np.dot(self.who, hidden_outputs)
-        # calculate the signals emerging from final output layer
-        final_outputs = self.activation_function(final_inputs)
+        next_hinputs = [0 for i in range(self.nhout)]
+        for dat in range(0, len(inputs_list) - 1):
 
-        return final_outputs
+            # append 0 * the number of hidden inputs to the input list, next_hinputs changes depending on time-step
+            inputs = np.array(inputs_list[dat] + next_hinputs).T
+            
+            # calculates the first inputs for the first hidden layer
+            hidden_inputs = np.dot(self.wih, inputs)
+            hidden_outputs = self.activation_function(hidden_inputs)
+            
+            # loops through each layer, calculating the outputs for each and storing them
+            current_layer = 1
+            while current_layer < len(self.wm):
+                # calculates the inputs for the next layer, then the outputs through the activation function
+                hidden_inputs = np.dot(self.wm[current_layer], hidden_outputs)
+                hidden_outputs = self.activation_function(hidden_inputs)
+
+                # increments the layer pointer
+                current_layer += 1
+
+
+            # the hidden outputs from the first time step are fed into the hidden inputs for the second
+            next_hinputs = hidden_outputs[-1][-self.nhout :]
+
+            if hidden_outputs[0] > self.buy_threshold and not buy_marker:
+                buy_sell_points.append((inputs, 1.0 - hidden_outputs[0]))
+                buy_marker = True
+            elif hidden_outputs[0] < self.sell_threshold and buy_marker:
+                buy_sell_points.append((inputs, hidden_outputs[0]))
+                break
+
+        profit = buy_sell_points[0][0][0] - buy_sell_points[1][0][0]
+        disparity = (buy_sell_points[0][1], buy_sell_points[1][1])            
+
+        return profit, disparity
 
 
 
