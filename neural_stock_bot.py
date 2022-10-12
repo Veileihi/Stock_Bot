@@ -71,7 +71,7 @@ class StockBot:
                 # the hidden outputs from the first time step are fed into the hidden inputs for the second
                 if two_cycle == 0: 
                     next_hinputs = output_list[-1][-self.nhout :]
-                    continue
+                    continue               
 
             # Multi-timestep backprop
             for two_cycle in range(2):
@@ -108,7 +108,7 @@ class StockBot:
             
         pass
 
-    # must write new query function     
+     
     # query the neural network
     def predict(self, inputs_list, stepsbehind, stepsahead):
         # list of predictions made given parameters
