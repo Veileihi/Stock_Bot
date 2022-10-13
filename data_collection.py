@@ -9,16 +9,17 @@ goog = goog.drop(['Date', 'Adj Close'], axis=1)
 goog.Volume = goog.Volume / 1000000.0
 # convert to numpy array
 goog = np.array(goog)
-goog = goog / 100
+goog = goog / 1000
+goog = goog[-400 :]
 
 
-goog_test = sb.StockBot(8, 5, 5, 0.1)
+goog_test = sb.StockBot(8, 5, 5, 0.01)
 goog_test.train(goog)
 
-""" predictions = goog_test.predict(goog, 100, 10)
-actual = goog_test[-10 :]
+predictions = goog_test.predict(goog, 100, 10)
+actual = goog[-10 :]
 errors = actual - predictions
-print(errors)  """ 
+print(errors) 
 
 
 
